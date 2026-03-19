@@ -334,12 +334,45 @@ GET http://localhost:5223/patientsummary/5
 At this point we have working system,
 But there are plenty of things to consider if it needs to be ready for production.
 
+** Testing
+Create an xunit project.
+
+#+begin_src bash
+cd ..
+dotnet new xunit -o PatientSummaryApi.Tests 
+#+end_src
+
+Add Moq to it
+
+#+begin_src bash
+dotnet add package Moq
+#+end_src
+
+Add a reference to my project
+
+#+begin_src bash
+dotnet add reference ../PatientSummaryApi/PatientSummaryApi.csproj
+#+end_src
+
 ** Security
-There some initial 
+*** IG — Information Governance
+Information Governance is the framework of policies, processes, and controls that govern how organisations handle personal and sensitive data — especially patient data in healthcare.
+In the NHS it covers:
+
+- Data protection — compliance with UK GDPR and the Data Protection Act 2018
+- Confidentiality — Caldicott Principles (the NHS-specific rules for patient data)
+- Data quality — ensuring records are accurate and complete
+- Information security — protecting data from breach or misuse
+- Records management — retention periods, safe disposal
+
+*** DSPT — Data Security and Protection Toolkit
+The DSPT is an NHS self-assessment tool that organisations must complete annually to demonstrate they meet the required standards for data security and information governance.
+
+So consider these to be required:
 - HTTPS
-- Public Facing?
-- Authentication
-  BASIC/API KEY/
+- Authentication BASIC/API KEY/JWT
+  If this is public facing more stringent security required.
+  Consider OAUTH/tokens and keys
 - Authorization
 - Handling DOS
 - Patient confidentiality
