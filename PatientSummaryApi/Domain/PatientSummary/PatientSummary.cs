@@ -1,4 +1,4 @@
-namespace PatientSummaryApi.Models;
+namespace PatientSummaryApi.Domain.PatientSummary;
 
 public class PatientSummary
 {

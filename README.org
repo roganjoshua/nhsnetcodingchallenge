@@ -1,9 +1,6 @@
 * NHS JOB :ATTACH:
 [[attachment:NET Coding Challenge.pdf][NET Coding Challenge.pdf]]
 
-Create a minimal API for returning patient records using REST.
-
-
 e.g. GET /patients//:id
 to return:
 
@@ -25,30 +22,16 @@ mise use dotnet@latest
 
 #+RESULTS:
 : mise ~/development/dotnet/NHSJob/mise.toml tools: dotnet@10.0.201
-
 *** Create a minimal API
 Start from scratch
 #+begin_src bash
 rm -rf PatientSummaryApi
 #+end_src
 
-#+RESULTS:
-
 Create a minimal API 
 #+begin_src bash
 dotnet new web -n PatientSummaryApi
 #+end_src
-
-#+RESULTS:
-| The         | template                                                                                  | "ASP.NET   | Core       | Empty" | was | created | successfully. |
-|             |                                                                                           |            |            |        |     |         |               |
-| Processing  | post-creation                                                                             | actions... |            |        |     |         |               |
-| Restoring   | /Users/martinsarosi/development/dotnet/NHSJob/PatientSummaryApi/PatientSummaryApi.csproj: |            |            |        |     |         |               |
-| Determining | projects                                                                                  | to         | restore... |        |     |         |               |
-| Restored    | /Users/martinsarosi/development/dotnet/NHSJob/PatientSummaryApi/PatientSummaryApi.csproj  | (in        | 37         | ms).   |     |         |               |
-| Restore     | succeeded.                                                                                |            |            |        |     |         |               |
-|             |                                                                                           |            |            |        |     |         |               |
-|             |                                                                                           |            |            |        |     |         |               |
 
 *** Initialise git repo
 #+begin_src bash
@@ -59,22 +42,8 @@ git add .
 git commit -m "Initial Minimal Api"
 #+end_src
 
-#+RESULTS:
-| The         | template      |  "dotnet | gitignore                      | file"         | was                                                                 | created | successfully. |
-|             |               |          |                                |               |                                                                     |         |               |
-| Initialized | empty         |      Git | repository                     | in            | /Users/martinsarosi/development/dotnet/NHSJob/PatientSummaryApi/.git/ |         |               |
-| [main       | (root-commit) | 8f1dcc2] | Initial                        | Minimal       | Api                                                                 |         |               |
-| 6           | files         | changed, | 537                            | insertions(+) |                                                                     |         |               |
-| create      | mode          |   100644 | .gitignore                     |               |                                                                     |         |               |
-| create      | mode          |   100644 | PatientSummaryApi.csproj       |               |                                                                     |         |               |
-| create      | mode          |   100644 | Program.cs                     |               |                                                                     |         |               |
-| create      | mode          |   100644 | Properties/launchSettings.json |               |                                                                     |         |               |
-| create      | mode          |   100644 | appsettings.Development.json   |               |                                                                     |         |               |
-| create      | mode          |   100644 | appsettings.json               |               |                                                                     |         |               |
-
 ** Environment
 My preference is ENVIRONMENT VARIABLES
-
 I usually have a =.env= file with
 
 #+begin_src bash :exports both 
@@ -83,11 +52,6 @@ cat .env
 
 #+RESULTS:
 : export ASPNETCORE_ENVIRONMENT=Development
-
-#+begin_example
-export ASPNETCORE_ENVIRONMENT=Development
-#+end_example
-
 Trust local dev certs if necessary
 
 #+begin_src bash
@@ -95,7 +59,6 @@ dotnet dev-certs https --trust
 #+end_src
 
 ENV variables for host, port and data layer
-
 Add an in-memory database EF package.
 
 #+begin_src bash
@@ -104,10 +67,7 @@ dotnet add package Microsoft.EntityFrameworkCore.InMemory
 
 ** Implement a Repository Pattern
 We will need a model for the Patient Summary
-
 Commonly found in a Models directory.
-I would later consider a Domain directory where Models and Entity interfaces can go as the models and their commands belong to a domain.
-e.g.
 
  #+begin_example
  Domain/PatientEnquiry/Models
@@ -117,20 +77,22 @@ e.g.
  for now just create the models directory
 #+begin_src bash
 mkdir Models
-touch Models/PatientSummary.cs
+touch Models/PatientSummaryDto.cs
 #+end_src
 
 Use a POCO for the models.
-
-
 #+BEGIN_ADMONITION NOTE
 Consider marking some properties if they should not be null.
+Id is generally not considered a good idea to expose but it depends on public facing or not.
+Not entirely sure what GpPractice is supposed to be but this data could get dirty easily.
+I have used DateOnly for date of birth as the time is not usually not relevant.
+NhsNumber must be in a certain format so regular expression might help to ensure data integrity
+="^\d{3} \d{2} \d{4}$"= for example.
 #+END_ADMONITION
 
-
-#+begin_src csharp :tangle Models/PatientSummary.cs :main no :class no 
+#+begin_src csharp :tangle Models/PatientSummaryDto.cs :main no :class no 
 namespace PatientSummaryApi.Models;
-public class PatientSummary {
+public class PatientSummaryDto {
     public int Id { get; init; }
     public required string Name { get; init; } 
     public required string NhsNumber { get; init; }
@@ -140,7 +102,6 @@ public class PatientSummary {
 #+end_src
 
 Need a DbContext if we are going to use Entity Framework.
-
 This isn't going to do very much so we will just keep it simple.
 
 #+begin_src csharp
@@ -155,8 +116,6 @@ public class PatientContext(DbContextOptions<PatientContext> options) : DbContex
 #+end_src
 
 For the purposes of the exercise we will be using an in-memory database.
-
-
 And it is common to seed the database using Dbinitializer and we can use this to populate some patients.
 
 #+begin_src csharp
@@ -204,7 +163,6 @@ public static class DbInitializer
 #+end_src
 
 And then implement a repository pattern.
-
 Start with an interface.
 I guess the AddPatientSummary isn't strictly necessary for this
 
@@ -335,10 +293,17 @@ At this point we have working system,
 But there are plenty of things to consider if it needs to be ready for production.
 
 ** Testing
+
+- [ ] Integration Testing
+  Test the endpoint using http
+- [ ] Unit Testing
+  There probably isn't enough in this to unit test
+
+In any case there should be a project to put tests into.
+
 Create an xunit project.
 
 #+begin_src bash
-cd ..
 dotnet new xunit -o PatientSummaryApi.Tests 
 #+end_src
 
@@ -346,12 +311,45 @@ Add Moq to it
 
 #+begin_src bash
 dotnet add package Moq
+dotnet add package FluentAssertions
 #+end_src
 
 Add a reference to my project
 
 #+begin_src bash
 dotnet add reference ../PatientSummaryApi/PatientSummaryApi.csproj
+#+end_src
+
+Non-useful test but a starting place
+
+#+begin_src csharp
+using PatientSummaryApi.Models;
+using PatientSummaryApi.Repository;
+
+namespace PatientSummaryApi.Tests;
+
+using Moq;
+using System.Threading.Tasks;
+using FluentAssertions;
+
+public class UnitTestPatientSummary
+{
+    [Fact]
+    public async Task GetPatientSummaryByIdAsync_ShouldReturnPatientSummary_WhenIdIsValid()
+    {
+        var mockRepo = new Mock<IPatientSummaryRepository>();
+        mockRepo.Setup(r => r.GetPatientSummaryById(1))
+            .ReturnsAsync(new PatientSummary
+            {
+                Id = 1, Name = "Martin", NhsNumber = "234 88 2938", GpPractice = "Acme",
+                DateOfBirth = DateOnly.Parse("1995-11-13")
+            });
+        var result = await mockRepo.Object.GetPatientSummaryById(1);
+
+        result?.Id.Should().Be(1);
+        result?.Name.Should().Be("Martin");
+    }
+}
 #+end_src
 
 ** Security
@@ -365,43 +363,43 @@ In the NHS it covers:
 - Information security — protecting data from breach or misuse
 - Records management — retention periods, safe disposal
 
-*** DSPT — Data Security and Protection Toolkit
-The DSPT is an NHS self-assessment tool that organisations must complete annually to demonstrate they meet the required standards for data security and information governance.
+If there are any organizational tools for security they would be use required.
 
+*** Other Considerations
 So consider these to be required:
-- HTTPS
-- Authentication BASIC/API KEY/JWT
+- [ ] HTTPS ensure that all interactions are encrypted
+  Production should use Environment Variables to ensure HTTPS only is used
+- [ ] Authentication BASIC/API KEY/JWT
   If this is public facing more stringent security required.
+  
+  =builder.Services.AddAuthentication()=
+  
   Consider OAUTH/tokens and keys
-- Authorization
-- Handling DOS
-- Patient confidentiality
-- 
+- [ ] Authorisation
+  Once a user has been authenticated they should have authorisation to access the patient summary resource.
+  
+  =builder.Services.AddAuthorization()=
+- [ ] Patient confidentiality
 
 ** Telemetry
 - Health
 - Logging
+  Is there a central place for all logs to go?
+  Grafana, 
+  Ensure no sensitive information is logged
 - Log requests
 - trace id - UUID to trace request
-
 ** Performance
 - Caching
-
 ** Design
 *** IOC Container
 - built in to register data for testing 
 *** Dependency Injection for Data Layer
 - mocked data layer
 - replacable for actual data layer
-
-** Testing Service and Endpoint 
-- exUnit etc
-- how to test endpoint
-
 ** API
 - HTTP Status Codes
 - Not Found, Not authorized, Success,
 - Security of codes
-
 ** Exception Handling
 - not much room here but data layer down
