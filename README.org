@@ -1,0 +1,374 @@
+* NHS JOB :ATTACH:
+[[attachment:NET Coding Challenge.pdf][NET Coding Challenge.pdf]]
+
+Create a minimal API for returning patient records using REST.
+
+
+e.g. GET /patients//:id
+to return:
+
+#+begin_src json
+{
+    "id": 123456,
+    "nhsNumber": "625 007 2349",
+    "name": "Martin Sarosi",
+    "dateOfBirth": “1967-11-14",
+    "gpPractice": "Spring Terrace Health Centre",
+}
+#+end_src
+
+** Getting Started
+*** Managing dotnet
+#+begin_src bash
+mise use dotnet@latest
+#+end_src
+
+#+RESULTS:
+: mise ~/development/dotnet/NHSJob/mise.toml tools: dotnet@10.0.201
+
+*** Create a minimal API
+Start from scratch
+#+begin_src bash
+rm -rf PatientSummaryApi
+#+end_src
+
+#+RESULTS:
+
+Create a minimal API 
+#+begin_src bash
+dotnet new web -n PatientSummaryApi
+#+end_src
+
+#+RESULTS:
+| The         | template                                                                                  | "ASP.NET   | Core       | Empty" | was | created | successfully. |
+|             |                                                                                           |            |            |        |     |         |               |
+| Processing  | post-creation                                                                             | actions... |            |        |     |         |               |
+| Restoring   | /Users/martinsarosi/development/dotnet/NHSJob/PatientSummaryApi/PatientSummaryApi.csproj: |            |            |        |     |         |               |
+| Determining | projects                                                                                  | to         | restore... |        |     |         |               |
+| Restored    | /Users/martinsarosi/development/dotnet/NHSJob/PatientSummaryApi/PatientSummaryApi.csproj  | (in        | 37         | ms).   |     |         |               |
+| Restore     | succeeded.                                                                                |            |            |        |     |         |               |
+|             |                                                                                           |            |            |        |     |         |               |
+|             |                                                                                           |            |            |        |     |         |               |
+
+*** Initialise git repo
+#+begin_src bash
+cd PatientSummaryApi
+dotnet new gitignore
+git init .
+git add .
+git commit -m "Initial Minimal Api"
+#+end_src
+
+#+RESULTS:
+| The         | template      |  "dotnet | gitignore                      | file"         | was                                                                 | created | successfully. |
+|             |               |          |                                |               |                                                                     |         |               |
+| Initialized | empty         |      Git | repository                     | in            | /Users/martinsarosi/development/dotnet/NHSJob/PatientSummaryApi/.git/ |         |               |
+| [main       | (root-commit) | 8f1dcc2] | Initial                        | Minimal       | Api                                                                 |         |               |
+| 6           | files         | changed, | 537                            | insertions(+) |                                                                     |         |               |
+| create      | mode          |   100644 | .gitignore                     |               |                                                                     |         |               |
+| create      | mode          |   100644 | PatientSummaryApi.csproj       |               |                                                                     |         |               |
+| create      | mode          |   100644 | Program.cs                     |               |                                                                     |         |               |
+| create      | mode          |   100644 | Properties/launchSettings.json |               |                                                                     |         |               |
+| create      | mode          |   100644 | appsettings.Development.json   |               |                                                                     |         |               |
+| create      | mode          |   100644 | appsettings.json               |               |                                                                     |         |               |
+
+** Environment
+My preference is ENVIRONMENT VARIABLES
+
+I usually have a =.env= file with
+
+#+begin_src bash :exports both 
+cat .env
+#+end_src
+
+#+RESULTS:
+: export ASPNETCORE_ENVIRONMENT=Development
+
+#+begin_example
+export ASPNETCORE_ENVIRONMENT=Development
+#+end_example
+
+Trust local dev certs if necessary
+
+#+begin_src bash
+dotnet dev-certs https --trust
+#+end_src
+
+ENV variables for host, port and data layer
+
+Add an in-memory database EF package.
+
+#+begin_src bash
+dotnet add package Microsoft.EntityFrameworkCore.InMemory
+#+end_src
+
+** Implement a Repository Pattern
+We will need a model for the Patient Summary
+
+Commonly found in a Models directory.
+I would later consider a Domain directory where Models and Entity interfaces can go as the models and their commands belong to a domain.
+e.g.
+
+ #+begin_example
+ Domain/PatientEnquiry/Models
+ Domain/PatientEnquiry/Services
+ #+end_example
+
+ for now just create the models directory
+#+begin_src bash
+mkdir Models
+touch Models/PatientSummary.cs
+#+end_src
+
+Use a POCO for the models.
+
+
+#+BEGIN_ADMONITION NOTE
+Consider marking some properties if they should not be null.
+#+END_ADMONITION
+
+
+#+begin_src csharp :tangle Models/PatientSummary.cs :main no :class no 
+namespace PatientSummaryApi.Models;
+public class PatientSummary {
+    public int Id { get; init; }
+    public required string Name { get; init; } 
+    public required string NhsNumber { get; init; }
+    public required string GpPractice { get; init; }
+    public DateOnly DateOfBirth { get; init; };
+}
+#+end_src
+
+Need a DbContext if we are going to use Entity Framework.
+
+This isn't going to do very much so we will just keep it simple.
+
+#+begin_src csharp
+namespace PatientSummaryApi.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Models;
+
+public class PatientContext(DbContextOptions<PatientContext> options) : DbContext(options)
+{
+    public DbSet<PatientSummary> PatientSummaries { get; set; }
+}
+#+end_src
+
+For the purposes of the exercise we will be using an in-memory database.
+
+
+And it is common to seed the database using Dbinitializer and we can use this to populate some patients.
+
+#+begin_src csharp
+using PatientSummaryApi.Models;
+namespace PatientSummaryApi.Persistence;
+
+public static class DbInitializer
+{
+    public static void Initialize(PatientContext context)
+    {
+        if (context.PatientSummaries.Any())
+        {
+            return; 
+        }
+
+        var patientSummaries = new[]
+        {
+            new PatientSummary
+            {
+                Name = "Martin Sarosi", 
+                NhsNumber = "625 007 2349", 
+                DateOfBirth = DateOnly.Parse("1967-11-14"),
+                GpPractice = "Spring Terrace Health Centre"
+            },
+            new PatientSummary
+            {
+                Name = "Jonathan Pickering", 
+                NhsNumber = "123 456 7890", 
+                DateOfBirth = DateOnly.Parse("1974-09-22"),
+                GpPractice = "Acme Health Centre"
+            },
+            new PatientSummary
+            {
+                Name = "Martin Fowler", 
+                NhsNumber = "987 654 3210",
+                DateOfBirth = DateOnly.Parse("1964-08-02"),
+                GpPractice = "Another Health Centre"
+            }
+        };
+
+        context.PatientSummaries.AddRange(patientSummaries);
+        context.SaveChanges();
+    }
+}
+#+end_src
+
+And then implement a repository pattern.
+
+Start with an interface.
+I guess the AddPatientSummary isn't strictly necessary for this
+
+#+begin_src csharp
+using PatientSummaryApi.Models;
+
+namespace PatientSummaryApi.Repository;
+public interface IPatientSummaryRepository
+{
+    Task<PatientSummary?> GetPatientSummaryById(int id);
+
+    IAsyncEnumerable<PatientSummary> GetPatientSummaries();
+
+    void AddPatientSummary(PatientSummary patientSummary);
+
+}
+#+end_src
+
+Now implement it.
+Depending on what is required one might consider a generic repository for =IRepository<T>= for consistent behaviour across repositories.
+
+#+begin_src csharp
+using Microsoft.EntityFrameworkCore;
+using PatientSummaryApi.Models;
+using PatientSummaryApi.Persistence;
+
+namespace PatientSummaryApi.Repository;
+
+public class PatientSummaryRepository : IPatientSummaryRepository
+{
+    private readonly PatientContext _context;
+
+    public PatientSummaryRepository(PatientContext context)
+        => _context = context;
+
+    public async Task<PatientSummary?> GetPatientSummaryById(int id)
+        => await _context.PatientSummaries.FirstOrDefaultAsync(b => b.Id == id);
+
+    public IAsyncEnumerable<PatientSummary> GetPatientSummaries()
+        => _context.PatientSummaries.AsAsyncEnumerable();
+
+    public void AddPatientSummary(PatientSummary patientSummary)
+    {
+        _context.PatientSummaries.Add(patientSummary);
+        _context.SaveChanges();
+    }
+}
+#+end_src
+
+** Get the API going 
+We should have enough to at least see data.
+
+So wire up the repository using dependency injection in the Program.cs
+
+#+begin_src csharp :file Program.cs
+using Microsoft.EntityFrameworkCore;
+using PatientSummaryApi.Persistence;
+using PatientSummaryApi.Repository;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add the in-memory db for use by the repository
+// This would normally come from configuration
+// so we can swap db contexts for Mock for Testing, PostgreSQL or MS SQL Server, and include connection strings
+builder
+    .Services
+    .AddDbContext<PatientContext>(options => options
+        .UseInMemoryDatabase("PatientSummaryDatabase")
+    );
+
+// we have a repository so register the interface with the implementation here
+// Lifetime only needs to be per request
+builder.Services.AddScoped<IPatientSummaryRepository, PatientSummaryRepository>();
+
+
+// build the app
+var app = builder.Build();
+
+// seed the database with dummmy data we created earlier
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var context = services.GetRequiredService<PatientContext>();
+    context.Database.EnsureCreated();
+    DbInitializer.Initialize(context);
+}
+
+// we don't want access to all the patients
+// app.MapGet("/patientsummary", (IPatientSummaryRepository patientSummaryRepository) => patientSummaryRepository.GetPatientSummaries());
+app.MapGet("/patientsummary/{id:int}", async (int id, IPatientSummaryRepository repo) =>
+{
+    var patientSummary = await repo.GetPatientSummaryById(id);
+    // the repo returns null if not found so return a 404 for not found
+    return patientSummary is not null ? Results.Ok(patientSummary) : Results.NotFound();
+});
+
+app.Run();
+
+#+end_src
+
+Test the endpoint.
+
+#+begin_src http :results export
+GET http://localhost:5223/patientsummary/1
+#+end_src
+
+#+RESULTS:
+: HTTP/1.1 200 OK
+: Content-Type: application/json; charset=utf-8
+: Date: Thu, 19 Mar 2026 13:50:07 GMT
+: Server: Kestrel
+: Transfer-Encoding: chunked
+: 
+: {"id":1,"name":"Martin Sarosi","nhsNumber":"625 007 2349","gpPractice":"Spring Terrace Health Centre","dateOfBirth":"1967-11-14"}
+
+#+begin_src http :results export
+GET http://localhost:5223/patientsummary/5
+#+end_src
+
+#+RESULTS:
+: HTTP/1.1 404 Not Found
+: Content-Length: 0
+: Date: Thu, 19 Mar 2026 13:52:46 GMT
+: Server: Kestrel
+: 
+
+At this point we have working system,
+But there are plenty of things to consider if it needs to be ready for production.
+
+** Security
+There some initial 
+- HTTPS
+- Public Facing?
+- Authentication
+  BASIC/API KEY/
+- Authorization
+- Handling DOS
+- Patient confidentiality
+- 
+
+** Telemetry
+- Health
+- Logging
+- Log requests
+- trace id - UUID to trace request
+
+** Performance
+- Caching
+
+** Design
+*** IOC Container
+- built in to register data for testing 
+*** Dependency Injection for Data Layer
+- mocked data layer
+- replacable for actual data layer
+
+** Testing Service and Endpoint 
+- exUnit etc
+- how to test endpoint
+
+** API
+- HTTP Status Codes
+- Not Found, Not authorized, Success,
+- Security of codes
+
+** Exception Handling
+- not much room here but data layer down
