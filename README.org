@@ -1,5 +1,5 @@
-# Created 2026-03-20 Fri 11:46
-#+title: = NHS Coding Challenge
+# Created 2026-03-20 Fri 12:13
+#+title: NHS Coding Challenge
 #+export: org-org-export-to-org
 #+export_file_name: ../README.org
 * NHS JOB
@@ -296,10 +296,8 @@ At this point we have working system,
 But there are plenty of things to consider if it needs to be ready for production.
 ** Testing
 
-- [ ] Integration Testing
-  Test the endpoint using http
-- [ ] Unit Testing
-  There probably isn't enough in this to unit test
+*** Integration Testing
+Test the endpoint using http
 
 In any case there should be a project to put tests into.
 
@@ -313,6 +311,8 @@ Add Moq to it
 
 #+begin_src bash
 dotnet add package Moq
+dotnet add package Refit
+dotnet add package Microsoft.AspNetCore.Mvc.Testing
 dotnet add package FluentAssertions
 #+end_src
 
@@ -322,34 +322,82 @@ Add a reference to my project
 dotnet add reference .../PatientSummaryApi/PatientSummaryApi.csproj
 #+end_src
 
-Non-useful test but a starting place
+#+begin_src bash
+<Project Sdk="Microsoft.NET.Sdk">
 
-#+begin_src csharp
-using PatientSummaryApi.Models;
-using PatientSummaryApi.Repository;
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="FluentAssertions" Version="8.9.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.5" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="Moq" Version="4.20.72" />
+    <PackageReference Include="Refit" Version="10.0.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PatientSummaryApi\PatientSummaryApi.csproj" />
+  </ItemGroup>
+
+</Project>
+#+end_src
+
+Write an integration test to test the endpoint.
+
+#+begin_src bash
+using System.Net;
+using FluentAssertions;
+using Microsoft.AspNetCore.Mvc.Testing;
+using PatientSummaryApi.Api;
+using Refit;
 
 namespace PatientSummaryApi.Tests;
 
-using Moq;
-using System.Threading.Tasks;
-using FluentAssertions;
-
-public class UnitTestPatientSummary
+public interface IPatientSummaryApi
 {
-    [Fact]
-    public async Task GetPatientSummaryByIdAsync_ShouldReturnPatientSummary_WhenIdIsValid()
-    {
-        var mockRepo = new Mock<IPatientSummaryRepository>();
-        mockRepo.Setup(r => r.GetPatientSummaryById(1))
-            .ReturnsAsync(new PatientSummary
-            {
-                Id = 1, Name = "Martin", NhsNumber = "234 88 2938", GpPractice = "Acme",
-                DateOfBirth = DateOnly.Parse("1995-11-13")
-            });
-        var result = await mockRepo.Object.GetPatientSummaryById(1);
+    [Get("/patientsummary/{id}")]
+    Task<PatientSummaryResponse> GetPatientSummaryById(int id);
+}
 
-        result?.Id.Should().Be(1);
-        result?.Name.Should().Be("Martin");
+public class IntegrationTestPatientSummary : IClassFixture<WebApplicationFactory<Program>>
+{
+    private readonly IPatientSummaryApi _api;
+
+    public IntegrationTestPatientSummary(WebApplicationFactory<Program> factory)
+    {
+        var httpClient = factory.CreateClient();
+        _api = RestService.For<IPatientSummaryApi>(httpClient);
+    }
+
+    [Fact]
+    public async Task GetPatientSummaryById_ReturnsPatient_WhenIdExists()
+    {
+        var result = await _api.GetPatientSummaryById(1);
+
+        result.Id.Should().Be(1);
+        result.Name.Should().Be("Martin Sarosi");
+        result.NhsNumber.Should().Be("625 007 2349");
+    }
+
+    [Fact]
+    public async Task GetPatientSummaryById_ThrowsApiException_WhenIdDoesNotExist()
+    {
+        var act = () => _api.GetPatientSummaryById(999);
+
+        await act.Should().ThrowAsync<ApiException>()
+            .Where(e => e.StatusCode == HttpStatusCode.NotFound);
     }
 }
 #+end_src
