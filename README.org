@@ -5,6 +5,7 @@
 * NHS JOB
 [[file:/Users/martinsarosi/development/dotnet/NHSJob/PatientSummaryApi/doc/NET Coding Challenge.pdf][NET Coding Challenge.pdf]]
 
+** Brief 
 e.g. GET /patients//:id
 to return:
 
@@ -17,6 +18,10 @@ to return:
     "gpPractice": "Spring Terrace Health Centre",
 }
 #+end_src
+
+- Return HTTP STATUS CODE 200 for Success
+- Return HTTP STATUS CODE 404 for Not Found
+  
 ** Getting Started
 *** Managing dotnet
 #+begin_src bash
@@ -438,15 +443,4 @@ So consider these to be required:
 - trace id - UUID to trace request
 ** Performance
 - Caching
-** Design
-*** IOC Container
-- built in to register data for testing
-*** Dependency Injection for Data Layer
-- mocked data layer
-- replacable for actual data layer
-** API
-- HTTP Status Codes
-- Not Found, Not authorized, Success,
-- Security of codes
-** Exception Handling
-- not much room here but data layer down
+- Rate Limiting 
