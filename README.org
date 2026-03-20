@@ -1,13 +1,12 @@
-# Created 2026-03-20 Fri 12:13
+# Created 2026-03-20 Fri 14:45
 #+title: NHS Coding Challenge
 #+export: org-org-export-to-org
 #+export_file_name: ../README.org
 * NHS JOB
 [[file:/Users/martinsarosi/development/dotnet/NHSJob/PatientSummaryApi/doc/NET Coding Challenge.pdf][NET Coding Challenge.pdf]]
 
-** Brief 
 e.g. GET /patients//:id
-to return       :
+to return:
 
 #+begin_src json
 {
@@ -18,10 +17,6 @@ to return       :
     "gpPractice": "Spring Terrace Health Centre",
 }
 #+end_src
-
-- Return HTTP STATUS CODE 200 for Success
-- Return HTTP STATUS CODE 404 for Not Found
-  
 ** Getting Started
 *** Managing dotnet
 #+begin_src bash
@@ -205,7 +200,50 @@ public class PatientSummaryRepository : IPatientSummaryRepository
 *** Domain Layer
 Business Layer.
 Models don't necessarily match tables.
-Services and business logic
+Services and business logic and validations.
+
+Domain Model
+#+begin_src csharp
+namespace PatientSummaryApi.Domain.PatientSummary;
+
+public class PatientSummary
+{
+    public int Id { get; init; }
+    public required string Name { get; init; }
+    public required string NhsNumber { get; init; }
+    public required string GpPractice { get; init; }
+    public DateOnly DateOfBirth { get; init; }
+}
+#+end_src
+
+Interface for Service
+#+begin_src csharp
+namespace PatientSummaryApi.Domain.PatientSummary;
+
+public interface IPatientSummaryService
+{
+    Task<PatientSummary> GetPatientSummaryById(int id); 
+}
+#+end_src
+
+Service Implementation
+#+begin_src csharp
+using PatientSummaryApi.Domain.PatientSummary;
+using PatientSummaryApi.Infrastructure.Repository;
+
+namespace PatientSummaryApi.Domain.PatientSummary;
+
+
+public class PatientSummaryService(IPatientSummaryRepository patientSummaryRepository) : IPatientSummaryService
+{
+    public async Task<PatientSummary> GetPatientSummaryById(int id)
+    {
+       var patientSummaryDto =  await patientSummaryRepository.GetPatientSummaryById(id);
+       return patientSummaryDto.ToModel();
+
+    }
+}
+#+end_src
 *** Api Layer
 Classes like PatientSummaryResponse/PatientSummaryRequest represent the API view.
 
@@ -300,7 +338,6 @@ GET http://localhost:5223/patientsummary/5
 At this point we have working system,
 But there are plenty of things to consider if it needs to be ready for production.
 ** Testing
-
 *** Integration Testing
 Test the endpoint using http
 
@@ -406,7 +443,7 @@ public class IntegrationTestPatientSummary : IClassFixture<WebApplicationFactory
     }
 }
 #+end_src
-** Things to in Future
+** Things to Do in Future
 *** Security
 **** IG — Information Governance
 Information Governance is the framework of policies, processes, and controls that govern how organisations handle personal and sensitive data — especially patient data in healthcare.
@@ -427,18 +464,16 @@ So consider these to be required:
   If this is public facing more stringent security required.
 - [ ] Authorisation
   Once a user has been authenticated they should have the roles/authorisation to access the patient summary resource.
-
-  =builder.Services.AddAuthorization()=
 - [ ] Patient confidentiality
 *** Telemetry
 - Health
 - Logging
   - Is there a central place for all logs to go?
-  - there should be a logging JSON format standard 
-  - Grafana, 
+  - there should be a logging JSON format standard
+  - Grafana,
 - Ensure no sensitive information is logged
 - Log requests
 - trace id - UUID to trace request
 *** Performance
 - Caching
-- Rate Limiting 
+- Rate Limiting

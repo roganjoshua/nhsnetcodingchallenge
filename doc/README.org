@@ -108,7 +108,18 @@ Depending on what is required one might consider a generic repository for =IRepo
 *** Domain Layer
 Business Layer.
 Models don't necessarily match tables.
-Services and business logic
+Services and business logic and validations.
+
+Domain Model
+#+include: "../PatientSummaryApi/Domain/PatientSummary/PatientSummary.cs" src csharp
+
+Interface for Service
+#+include: "../PatientSummaryApi/Domain/PatientSummary/IPatientSummaryService.cs" src csharp
+
+Service Implementation
+#+include: "../PatientSummaryApi/Domain/Services/PatientSummaryService.cs" src csharp
+
+
 *** Api Layer
 Classes like PatientSummaryResponse/PatientSummaryRequest represent the API view.
 
@@ -155,8 +166,7 @@ At this point we have working system,
 But there are plenty of things to consider if it needs to be ready for production.
 
 ** Testing
-
-- [ ] Integration Testing
+*** Integration Testing
   Test the endpoint using http
 
 In any case there should be a project to put tests into.
@@ -188,8 +198,9 @@ Write an integration test to test the endpoint.
 
 #+include: "../PatientSummaryApi.Tests/IntegrationTestPatientSummary.cs" src bash
 
-** Security
-*** IG — Information Governance
+** Things to Do in Future
+*** Security
+**** IG — Information Governance
 Information Governance is the framework of policies, processes, and controls that govern how organisations handle personal and sensitive data — especially patient data in healthcare.
 In the NHS it covers:
 
@@ -200,42 +211,24 @@ In the NHS it covers:
 - Records management — retention periods, safe disposal
 
 If there are any organizational tools for security they would be use required.
-
-*** Other Considerations
+**** Other Considerations
 So consider these to be required:
 - [ ] HTTPS ensure that all interactions are encrypted
   Production should use Environment Variables to ensure HTTPS only is used
-- [ ] Authentication BASIC/API KEY/JWT
+- [ ] Authentication BASIC/API KEY/JWT/Asymmetric keys
   If this is public facing more stringent security required.
-  
-  =builder.Services.AddAuthentication()=
-  
-  Consider OAUTH/tokens and keys
 - [ ] Authorisation
-  Once a user has been authenticated they should have authorisation to access the patient summary resource.
-  
-  =builder.Services.AddAuthorization()=
+  Once a user has been authenticated they should have the roles/authorisation to access the patient summary resource.
 - [ ] Patient confidentiality
-
-** Telemetry
+*** Telemetry
 - Health
 - Logging
-  Is there a central place for all logs to go?
-  Grafana, 
-  Ensure no sensitive information is logged
+  - Is there a central place for all logs to go?
+  - there should be a logging JSON format standard 
+  - Grafana, 
+- Ensure no sensitive information is logged
 - Log requests
 - trace id - UUID to trace request
-** Performance
+*** Performance
 - Caching
-** Design
-*** IOC Container
-- built in to register data for testing 
-*** Dependency Injection for Data Layer
-- mocked data layer
-- replacable for actual data layer
-** API
-- HTTP Status Codes
-- Not Found, Not authorized, Success,
-- Security of codes
-** Exception Handling
-- not much room here but data layer down
+- Rate Limiting 
