@@ -1,8 +1,7 @@
-namespace PatientSummaryApi.Persistence;
+namespace PatientSummaryApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using Models;
 
 public class PatientContext(DbContextOptions<PatientContext> options) : DbContext(options)
 {
-    public DbSet<PatientSummary> PatientSummaries { get; set; }
+    public DbSet<PatientSummaryDto> PatientSummaries { get; set; }
 }

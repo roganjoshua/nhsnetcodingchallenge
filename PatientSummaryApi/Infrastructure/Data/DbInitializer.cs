@@ -1,5 +1,4 @@
-using PatientSummaryApi.Models;
-namespace PatientSummaryApi.Persistence;
+namespace PatientSummaryApi.Infrastructure.Data;
 
 public static class DbInitializer
 {
@@ -13,21 +12,21 @@ public static class DbInitializer
 
         var patientSummaries = new[]
         {
-            new PatientSummary
+            new PatientSummaryDto
             {
                 Name = "Martin Sarosi", 
                 NhsNumber = "625 007 2349", 
                 DateOfBirth = DateOnly.Parse("1967-11-14"),
                 GpPractice = "Spring Terrace Health Centre"
             },
-            new PatientSummary
+            new PatientSummaryDto
             {
                 Name = "Jonathan Pickering", 
                 NhsNumber = "123 456 7890", 
                 DateOfBirth = DateOnly.Parse("1974-09-22"),
                 GpPractice = "Acme Health Centre"
             },
-            new PatientSummary
+            new PatientSummaryDto
             {
                 Name = "Martin Fowler", 
                 NhsNumber = "987 654 3210",

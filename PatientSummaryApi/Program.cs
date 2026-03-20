@@ -1,9 +1,14 @@
 using Microsoft.EntityFrameworkCore;
-using PatientSummaryApi.Persistence;
-using PatientSummaryApi.Repository;
+using PatientSummaryApi;
+using PatientSummaryApi.Domain.PatientSummary;
+using PatientSummaryApi.Infrastructure.Data;
+using PatientSummaryApi.Infrastructure.Repository;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add the in-memory db for use by the repository
+// This would normally come from configuration
+// so we can swap db contexts for Mock for Testing, PostgreSQL or MS SQL Server, and include connection strings
 builder
     .Services
     .AddDbContext<PatientContext>(options => options
@@ -11,6 +16,8 @@ builder
     );
 
 builder.Services.AddScoped<IPatientSummaryRepository, PatientSummaryRepository>();
+builder.Services.AddScoped<IPatientSummaryService, PatientSummaryService>();
+
 var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
@@ -21,11 +28,16 @@ using (var scope = app.Services.CreateScope())
 }
 
 
-// app.MapGet("/patientsummary", (IPatientSummaryRepository patientSummaryRepository) => patientSummaryRepository.GetPatientSummaries());
-app.MapGet("/patientsummary/{id:int}", async (int id, IPatientSummaryRepository repo) =>
+// constrain id to an int
+app.MapGet("/patientsummary/{id:int}", async (int id, IPatientSummaryService patientSummaryService) =>
 {
-    var patientSummary = await repo.GetPatientSummaryById(id);
-    return patientSummary is not null ? Results.Ok(patientSummary) : Results.NotFound();
+    var patientSummary = await patientSummaryService.GetPatientSummaryById(id);
+    if (patientSummary == null)
+    {
+       return Results.NotFound();
+    }
+
+    return Results.Ok(patientSummary.ToResponse());
 });
 
 app.Run();

@@ -1,8 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using PatientSummaryApi.Models;
-using PatientSummaryApi.Persistence;
-
-namespace PatientSummaryApi.Repository;
+using PatientSummaryApi.Infrastructure.Data;
+namespace PatientSummaryApi.Infrastructure.Repository;
 
 public class PatientSummaryRepository : IPatientSummaryRepository
 {
@@ -11,13 +9,13 @@ public class PatientSummaryRepository : IPatientSummaryRepository
     public PatientSummaryRepository(PatientContext context)
         => _context = context;
 
-    public async Task<PatientSummary?> GetPatientSummaryById(int id)
+    public async Task<PatientSummaryDto?> GetPatientSummaryById(int id)
         => await _context.PatientSummaries.FirstOrDefaultAsync(b => b.Id == id);
 
-    public IAsyncEnumerable<PatientSummary> GetPatientSummaries()
+    public IAsyncEnumerable<PatientSummaryDto> GetPatientSummaries()
         => _context.PatientSummaries.AsAsyncEnumerable();
 
-    public void AddPatientSummary(PatientSummary patientSummary)
+    public void AddPatientSummary(PatientSummaryDto patientSummary)
     {
         _context.PatientSummaries.Add(patientSummary);
         _context.SaveChanges();
