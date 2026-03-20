@@ -46,246 +46,104 @@ git commit -m "Initial Minimal Api"
 My preference is ENVIRONMENT VARIABLES
 I usually have a =.env= file with
 
-#+begin_src bash :exports both 
-cat .env
-#+end_src
+#+include: "./PatientSummaryApi/.env" src bash
 
-#+RESULTS:
-: export ASPNETCORE_ENVIRONMENT=Development
+Also env variables for host, port and data layer, connection strings etc.
+
 Trust local dev certs if necessary
 
 #+begin_src bash
 dotnet dev-certs https --trust
 #+end_src
 
-ENV variables for host, port and data layer
 Add an in-memory database EF package.
 
 #+begin_src bash
 dotnet add package Microsoft.EntityFrameworkCore.InMemory
 #+end_src
 
-** Implement a Repository Pattern
-We will need a model for the Patient Summary
-Commonly found in a Models directory.
+** Models Dtos and Responses
+There are three layers to go from data to web api.
+*** Persistence Layer
+Data Transfer Objects for mapping to the database.
+Classes are informed by the database requirements like normalisation, indexing etc.
+**** Implement a Repository Pattern
 
  #+begin_example
- Domain/PatientEnquiry/Models
- Domain/PatientEnquiry/Services
+ Infrastructure/Data/Dtos
  #+end_example
 
- for now just create the models directory
-#+begin_src bash
-mkdir Models
-touch Models/PatientSummaryDto.cs
-#+end_src
-
-Use a POCO for the models.
-#+BEGIN_ADMONITION NOTE
-Consider marking some properties if they should not be null.
-Id is generally not considered a good idea to expose but it depends on public facing or not.
-Not entirely sure what GpPractice is supposed to be but this data could get dirty easily.
-I have used DateOnly for date of birth as the time is not usually not relevant.
-NhsNumber must be in a certain format so regular expression might help to ensure data integrity
-="^\d{3} \d{2} \d{4}$"= for example.
-#+END_ADMONITION
-
-#+begin_src csharp :tangle Models/PatientSummaryDto.cs :main no :class no 
-namespace PatientSummaryApi.Models;
-public class PatientSummaryDto {
-    public int Id { get; init; }
-    public required string Name { get; init; } 
-    public required string NhsNumber { get; init; }
-    public required string GpPractice { get; init; }
-    public DateOnly DateOfBirth { get; init; };
-}
-#+end_src
+#+include: "./PatientSummaryApi/Infrastructure/Data/PatientSummaryDto.cs" src csharp
 
 Need a DbContext if we are going to use Entity Framework.
 This isn't going to do very much so we will just keep it simple.
 
-#+begin_src csharp
-namespace PatientSummaryApi.Persistence;
-using Microsoft.EntityFrameworkCore;
-using Models;
+#+include: "./PatientSummaryApi/Infrastructure/Data/PatientContext.cs" src csharp
 
-public class PatientContext(DbContextOptions<PatientContext> options) : DbContext(options)
-{
-    public DbSet<PatientSummary> PatientSummaries { get; set; }
-}
-#+end_src
+Use an in-memory database.
+Seed the database with some patients.
 
-For the purposes of the exercise we will be using an in-memory database.
-And it is common to seed the database using Dbinitializer and we can use this to populate some patients.
-
-#+begin_src csharp
-using PatientSummaryApi.Models;
-namespace PatientSummaryApi.Persistence;
-
-public static class DbInitializer
-{
-    public static void Initialize(PatientContext context)
-    {
-        if (context.PatientSummaries.Any())
-        {
-            return; 
-        }
-
-        var patientSummaries = new[]
-        {
-            new PatientSummary
-            {
-                Name = "Martin Sarosi", 
-                NhsNumber = "625 007 2349", 
-                DateOfBirth = DateOnly.Parse("1967-11-14"),
-                GpPractice = "Spring Terrace Health Centre"
-            },
-            new PatientSummary
-            {
-                Name = "Jonathan Pickering", 
-                NhsNumber = "123 456 7890", 
-                DateOfBirth = DateOnly.Parse("1974-09-22"),
-                GpPractice = "Acme Health Centre"
-            },
-            new PatientSummary
-            {
-                Name = "Martin Fowler", 
-                NhsNumber = "987 654 3210",
-                DateOfBirth = DateOnly.Parse("1964-08-02"),
-                GpPractice = "Another Health Centre"
-            }
-        };
-
-        context.PatientSummaries.AddRange(patientSummaries);
-        context.SaveChanges();
-    }
-}
-#+end_src
+#+include: "./PatientSummaryApi/Infrastructure/Data/DbInitializer.cs" src csharp
 
 And then implement a repository pattern.
 Start with an interface.
-I guess the AddPatientSummary isn't strictly necessary for this
 
-#+begin_src csharp
-using PatientSummaryApi.Models;
+#+include: "./PatientSummaryApi/Infrastructure/Repository/IPatientSummaryRepository.cs" src csharp
 
-namespace PatientSummaryApi.Repository;
-public interface IPatientSummaryRepository
-{
-    Task<PatientSummary?> GetPatientSummaryById(int id);
-
-    IAsyncEnumerable<PatientSummary> GetPatientSummaries();
-
-    void AddPatientSummary(PatientSummary patientSummary);
-
-}
-#+end_src
-
-Now implement it.
 Depending on what is required one might consider a generic repository for =IRepository<T>= for consistent behaviour across repositories.
 
-#+begin_src csharp
-using Microsoft.EntityFrameworkCore;
-using PatientSummaryApi.Models;
-using PatientSummaryApi.Persistence;
+#+include: "./PatientSummaryApi/Infrastructure/Repository/PatientSummaryRepository.cs" src csharp
 
-namespace PatientSummaryApi.Repository;
+#+BEGIN_ADMONITION NOTE
+- Consider marking some properties if they should not be null.
+- Id is generally not considered a good idea to expose but it depends on public facing or not.
+- Not entirely sure what GpPractice is supposed to be but this data could get dirty easily.
+- I have used DateOnly for date of birth as the time is not usually not relevant.
+- NhsNumber must be in a certain format so regular expression might help to ensure data integrity ="^\d{3} \d{2} \d{4}$"= for example.
+#+END_ADMONITION
+*** Domain Layer
+Business Layer.
+Models don't necessarily match tables.
+Services and business logic
+*** Api Layer
+Classes like PatientSummaryResponse/PatientSummaryRequest represent the API view.
 
-public class PatientSummaryRepository : IPatientSummaryRepository
-{
-    private readonly PatientContext _context;
+#+include: "./PatientSummaryApi/Api/PatientSummaryResponse.cs" src csharp
 
-    public PatientSummaryRepository(PatientContext context)
-        => _context = context;
-
-    public async Task<PatientSummary?> GetPatientSummaryById(int id)
-        => await _context.PatientSummaries.FirstOrDefaultAsync(b => b.Id == id);
-
-    public IAsyncEnumerable<PatientSummary> GetPatientSummaries()
-        => _context.PatientSummaries.AsAsyncEnumerable();
-
-    public void AddPatientSummary(PatientSummary patientSummary)
-    {
-        _context.PatientSummaries.Add(patientSummary);
-        _context.SaveChanges();
-    }
-}
-#+end_src
+*** Mappings
+Extension methods for mapping between classes might be useful, automappers can help.
 
 ** Get the API going 
 We should have enough to at least see data.
 
 So wire up the repository using dependency injection in the Program.cs
-
-#+begin_src csharp :file Program.cs
-using Microsoft.EntityFrameworkCore;
-using PatientSummaryApi.Persistence;
-using PatientSummaryApi.Repository;
-
-var builder = WebApplication.CreateBuilder(args);
-
-// Add the in-memory db for use by the repository
-// This would normally come from configuration
-// so we can swap db contexts for Mock for Testing, PostgreSQL or MS SQL Server, and include connection strings
-builder
-    .Services
-    .AddDbContext<PatientContext>(options => options
-        .UseInMemoryDatabase("PatientSummaryDatabase")
-    );
-
-// we have a repository so register the interface with the implementation here
-// Lifetime only needs to be per request
-builder.Services.AddScoped<IPatientSummaryRepository, PatientSummaryRepository>();
-
-
-// build the app
-var app = builder.Build();
-
-// seed the database with dummmy data we created earlier
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    var context = services.GetRequiredService<PatientContext>();
-    context.Database.EnsureCreated();
-    DbInitializer.Initialize(context);
-}
-
-// we don't want access to all the patients
-// app.MapGet("/patientsummary", (IPatientSummaryRepository patientSummaryRepository) => patientSummaryRepository.GetPatientSummaries());
-app.MapGet("/patientsummary/{id:int}", async (int id, IPatientSummaryRepository repo) =>
-{
-    var patientSummary = await repo.GetPatientSummaryById(id);
-    // the repo returns null if not found so return a 404 for not found
-    return patientSummary is not null ? Results.Ok(patientSummary) : Results.NotFound();
-});
-
-app.Run();
-
-#+end_src
+#+include: "./PatientSummaryApi/Program.cs" src csharp -n 
 
 Test the endpoint.
 
-#+begin_src http :results export
+#+begin_src http :results both
 GET http://localhost:5223/patientsummary/1
 #+end_src
 
 #+RESULTS:
+
 : HTTP/1.1 200 OK
 : Content-Type: application/json; charset=utf-8
-: Date: Thu, 19 Mar 2026 13:50:07 GMT
+: Date: Fri, 20 Mar 2026 11:24:57 GMT
 : Server: Kestrel
 : Transfer-Encoding: chunked
 : 
 : {"id":1,"name":"Martin Sarosi","nhsNumber":"625 007 2349","gpPractice":"Spring Terrace Health Centre","dateOfBirth":"1967-11-14"}
 
-#+begin_src http :results export
+#+begin_src http :results both
 GET http://localhost:5223/patientsummary/5
 #+end_src
 
 #+RESULTS:
+
 : HTTP/1.1 404 Not Found
 : Content-Length: 0
-: Date: Thu, 19 Mar 2026 13:52:46 GMT
+: Date: Fri, 20 Mar 2026 11:24:54 GMT
 : Server: Kestrel
 : 
 
