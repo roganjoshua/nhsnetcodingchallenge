@@ -1,4 +1,4 @@
-#+TITLE: = NHS Coding Challenge
+#+TITLE: NHS Coding Challenge
 #+EXPORT: org-org-export-to-org
 #+EXPORT_FILE_NAME: ../README.org
 
@@ -158,8 +158,6 @@ But there are plenty of things to consider if it needs to be ready for productio
 
 - [ ] Integration Testing
   Test the endpoint using http
-- [ ] Unit Testing
-  There probably isn't enough in this to unit test
 
 In any case there should be a project to put tests into.
 
@@ -173,6 +171,8 @@ Add Moq to it
 
 #+begin_src bash
 dotnet add package Moq
+dotnet add package Refit
+dotnet add package Microsoft.AspNetCore.Mvc.Testing
 dotnet add package FluentAssertions
 #+end_src
 
@@ -182,37 +182,11 @@ Add a reference to my project
 dotnet add reference .../PatientSummaryApi/PatientSummaryApi.csproj
 #+end_src
 
-Non-useful test but a starting place
+#+include: "../PatientSummaryApi.Tests/PatientSummaryApi.Tests.csproj" src bash
 
-#+begin_src csharp
-using PatientSummaryApi.Models;
-using PatientSummaryApi.Repository;
+Write an integration test to test the endpoint.
 
-namespace PatientSummaryApi.Tests;
-
-using Moq;
-using System.Threading.Tasks;
-using FluentAssertions;
-
-public class UnitTestPatientSummary
-{
-    [Fact]
-    public async Task GetPatientSummaryByIdAsync_ShouldReturnPatientSummary_WhenIdIsValid()
-    {
-        var mockRepo = new Mock<IPatientSummaryRepository>();
-        mockRepo.Setup(r => r.GetPatientSummaryById(1))
-            .ReturnsAsync(new PatientSummary
-            {
-                Id = 1, Name = "Martin", NhsNumber = "234 88 2938", GpPractice = "Acme",
-                DateOfBirth = DateOnly.Parse("1995-11-13")
-            });
-        var result = await mockRepo.Object.GetPatientSummaryById(1);
-
-        result?.Id.Should().Be(1);
-        result?.Name.Should().Be("Martin");
-    }
-}
-#+end_src
+#+include: "../PatientSummaryApi.Tests/IntegrationTestPatientSummary.cs" src bash
 
 ** Security
 *** IG — Information Governance
