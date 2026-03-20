@@ -7,7 +7,7 @@
 
 ** Brief 
 e.g. GET /patients//:id
-to return:
+to return       :
 
 #+begin_src json
 {
@@ -406,8 +406,9 @@ public class IntegrationTestPatientSummary : IClassFixture<WebApplicationFactory
     }
 }
 #+end_src
-** Security
-*** IG — Information Governance
+** Things to in Future
+*** Security
+**** IG — Information Governance
 Information Governance is the framework of policies, processes, and controls that govern how organisations handle personal and sensitive data — especially patient data in healthcare.
 In the NHS it covers:
 
@@ -418,29 +419,26 @@ In the NHS it covers:
 - Records management — retention periods, safe disposal
 
 If there are any organizational tools for security they would be use required.
-*** Other Considerations
+**** Other Considerations
 So consider these to be required:
 - [ ] HTTPS ensure that all interactions are encrypted
   Production should use Environment Variables to ensure HTTPS only is used
-- [ ] Authentication BASIC/API KEY/JWT
+- [ ] Authentication BASIC/API KEY/JWT/Asymmetric keys
   If this is public facing more stringent security required.
-
-  =builder.Services.AddAuthentication()=
-
-  Consider OAUTH/tokens and keys
 - [ ] Authorisation
-  Once a user has been authenticated they should have authorisation to access the patient summary resource.
+  Once a user has been authenticated they should have the roles/authorisation to access the patient summary resource.
 
   =builder.Services.AddAuthorization()=
 - [ ] Patient confidentiality
-** Telemetry
+*** Telemetry
 - Health
 - Logging
-  Is there a central place for all logs to go?
-  Grafana, 
-  Ensure no sensitive information is logged
+  - Is there a central place for all logs to go?
+  - there should be a logging JSON format standard 
+  - Grafana, 
+- Ensure no sensitive information is logged
 - Log requests
 - trace id - UUID to trace request
-** Performance
+*** Performance
 - Caching
 - Rate Limiting 
